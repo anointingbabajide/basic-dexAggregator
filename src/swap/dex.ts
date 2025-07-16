@@ -60,7 +60,7 @@ export default function DexSwapComponent() {
       ) {
         const erc20contract = getERC20Contract(signer, tokenIn);
         const allowance = await erc20contract.approve(
-          routerAddress,
+          dexAggregatorAddress,
           MaxUint256
         );
         await allowance.wait();
