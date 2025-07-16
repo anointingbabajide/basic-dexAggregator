@@ -206,7 +206,7 @@ export default function DexSwap() {
           </>
         );
       } else {
-        setMessage("Swap completed, but transaction hash not found.");
+        setMessage("Swap fail");
       }
     } catch (error) {
       console.error("Error while perfoming swap:", error);
