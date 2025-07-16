@@ -109,6 +109,9 @@ export default function DexSwap() {
         if (tokenIn === MON_ADDRESS && tokenOut === WMON_ADDRESS) {
           setAmountOutMin(amountIn);
           return;
+        } else if (tokenIn === WMON_ADDRESS && tokenOut === MON_ADDRESS) {
+          setAmountOutMin(amountIn);
+          return;
         }
         // Get decimals for input token
         const decimalsIn = getTokenDecimals(tokenIn);
@@ -234,7 +237,7 @@ export default function DexSwap() {
               disabled={isSwapping}
               className="flex-grow bg-transparent text-gray-100 text-xl font-semibold outline-none"
             />
-            <select
+            {/* <select
               className="ml-4 bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
               value={tokenIn}
               onChange={(e) => setTokenIn(e.target.value)}
@@ -245,7 +248,36 @@ export default function DexSwap() {
                   {symbol}
                 </option>
               ))}
-            </select>
+            </select> */}
+
+            <div className="flex items-center space-x-2">
+              {/* Show image matching current selected tokenOut */}
+              <Image
+                src={
+                  TOKENS.find((t) => t.address === tokenIn)?.image ??
+                  "/default-token.png"
+                }
+                alt={
+                  TOKENS.find((t) => t.address === tokenIn)?.symbol ?? "token"
+                }
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
+
+              <select
+                className="bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
+                value={tokenIn}
+                onChange={(e) => setTokenIn(e.target.value)}
+                disabled={isSwapping}
+              >
+                {TOKENS.map(({ symbol, address }) => (
+                  <option key={address} value={address}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </label>
         {/* Swap direction toggle */}
@@ -287,25 +319,47 @@ export default function DexSwap() {
               className="flex-grow bg-transparent text-gray-400 text-xl font-semibold outline-none"
               readOnly
             />
-            <select
+            {/* <select
               className="ml-4 bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
               value={tokenOut}
               onChange={(e) => setTokenOut(e.target.value)}
               disabled={isSwapping}
             >
-              {TOKENS.map(({ symbol, address, image }) => (
+              {TOKENS.map(({ symbol, address }) => (
                 <option key={address} value={address}>
-                  <Image
-                    src={image}
-                    alt={symbol}
-                    width={24}
-                    height={24}
-                    className="inline-block mr-2"
-                  />
                   {symbol}
                 </option>
               ))}
-            </select>
+            </select> */}
+
+            <div className="flex items-center space-x-2">
+              {/* Show image matching current selected tokenOut */}
+              <Image
+                src={
+                  TOKENS.find((t) => t.address === tokenOut)?.image ??
+                  "/default-token.png"
+                }
+                alt={
+                  TOKENS.find((t) => t.address === tokenOut)?.symbol ?? "token"
+                }
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
+
+              <select
+                className="bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
+                value={tokenOut}
+                onChange={(e) => setTokenOut(e.target.value)}
+                disabled={isSwapping}
+              >
+                {TOKENS.map(({ symbol, address }) => (
+                  <option key={address} value={address}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </label>
         {/* Advanced Options Toggle */}
