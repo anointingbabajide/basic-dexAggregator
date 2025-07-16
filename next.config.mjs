@@ -1,3 +1,5 @@
+// next.config.js
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -15,6 +17,17 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+  },
+  webpack(config) {
+    config.optimization.minimizer = config.optimization.minimizer.map(
+      (plugin) => {
+        if (plugin.constructor.name === "TerserPlugin") {
+          plugin.options.exclude = /HeartbeatWorker/;
+        }
+        return plugin;
+      }
+    );
+    return config;
   },
 };
 
