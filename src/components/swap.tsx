@@ -51,11 +51,12 @@ export default function DexSwap() {
   const [spillaagetolerancePercent, setSlippageTolerancePercent] =
     useState(0.5);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const { address } = useAccount();
   const { handleSwap } = DexSwapComponent();
   const signer = useEthersSigner();
   const activeAccount = useActiveAccount();
   const activeChain = useActiveWalletChain();
+
+  const address = activeAccount?.address;
   const deadline = Math.floor(Date.now() / 1000) + deadlineMinutes * 60;
 
   // console.log("Connected address:", address);
@@ -431,7 +432,7 @@ export default function DexSwap() {
             {isSwapping ? "Swapping..." : "Swap"}
           </button>
         ) : (
-          <ConnectButton />
+          <ConnectWallet />
         )}
         {/* Status Message */}
         {/* Status Message */}
