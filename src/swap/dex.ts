@@ -1,10 +1,17 @@
 import { ethers } from "ethers";
 import { useWalletClient, useAccount } from "wagmi";
-import { getTokenFaucetContract } from "@/api/web3";
+import { getERC20Contract, getTokenFaucetContract } from "@/api/web3";
 import { useEffect, useState } from "react";
-import { MON_ADDRESS } from "@/constant/addresses";
+import {
+  dexAggregatorAddress,
+  MON_ADDRESS,
+  USDC_ADDRESS,
+  USDT_ADDRESS,
+  WMON_ADDRESS,
+} from "@/constant/addresses";
 import { getBestQuote } from "./quote";
 import { useEthersSigner } from "@/api/ethers";
+import { MaxUint256 } from "ethers";
 
 export default function DexSwapComponent() {
   const { address, isConnected } = useAccount();
@@ -24,10 +31,11 @@ export default function DexSwapComponent() {
     }
 
     try {
-      // const quote = await getBestQuote(signer, amountIn, [tokenIn, tokenOut]);
-      // if (!quote) {
-      //   throw new Error("Failed to get quote");
-      // }
+      const quote = await getBestQuote(signer, amountIn, [tokenIn, tokenOut]);
+      if (!quote) {
+        throw new Error("Failed to get quote");
+      }
+      const routerAddress = quote.routerAddress;
       // console.log("Quote received:", quote);
       // const estimatedAmount = quote.amountOut;
       // console.log("Estimated amount out:", estimatedAmount.toString());
@@ -35,6 +43,29 @@ export default function DexSwapComponent() {
       // const amountOutMin =
       //   (estimatedAmount * BigInt(10000 - slippageTolerancePercent * 100)) /
       //   BigInt(10000);
+
+      if (tokenIn === WMON_ADDRESS && tokenOut === MON_ADDRESS) {
+        const erc20contract = getERC20Contract(signer, tokenIn);
+        const allowance = await erc20contract.approve(
+          dexAggregatorAddress,
+          MaxUint256
+        );
+        await allowance.wait();
+      }
+
+      if (
+        tokenIn === WMON_ADDRESS ||
+        tokenIn === USDT_ADDRESS ||
+        tokenIn === USDC_ADDRESS
+      ) {
+        const erc20contract = getERC20Contract(signer, tokenIn);
+        const allowance = await erc20contract.approve(
+          routerAddress,
+          MaxUint256
+        );
+        await allowance.wait();
+      }
+
       const contract = await getTokenFaucetContract(signer);
       if (!contract) throw new Error("Failed to get contract instance");
       if (!tokenIn || !tokenOut || !amountIn || !amountOutMin || !deadline) {
