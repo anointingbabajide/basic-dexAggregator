@@ -223,14 +223,14 @@ export default function DexSwap() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col space-y-7 justify-center items-center px-4">
       <ConnectWallet />
-      <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-xl p-6 text-gray-200">
+      <div className="w-full sm:max-w-md  bg-gray-800 rounded-2xl shadow-xl p-6 text-gray-200">
         <h1 className="text-3xl font-bold mb-6 text-center">
           Basic Aggregator DEX
         </h1>
         {/* FROM Input */}
         <label className="block mb-4">
           <span className="block mb-2 font-semibold">From</span>
-          <div className="flex items-center bg-gray-700 rounded-lg px-4 py-3">
+          <div className="flex flex-row items-center justify-between bg-gray-700 rounded-lg px-4 py-3 sm:max-w-md w-full">
             <input
               // type="number"
               min="0"
@@ -239,7 +239,7 @@ export default function DexSwap() {
               value={amountIn}
               onChange={(e) => setAmountIn(e.target.value)}
               disabled={isSwapping}
-              className="flex-grow bg-transparent text-gray-100 text-xl font-semibold outline-none"
+              className="w-full bg-transparent text-gray-100 text-xl font-semibold outline-none"
             />
 
             <div className="flex items-center space-x-2">
@@ -359,7 +359,7 @@ export default function DexSwap() {
         {/* TO Output (readonly amountOutMin optional) */}
         <label className="block mb-4">
           <span className="block mb-2 font-semibold">To</span>
-          <div className="flex items-center bg-gray-700 rounded-lg px-4 py-3">
+          <div className="flex flex-row items-center justify-between bg-gray-700 rounded-lg px-4 py-3">
             <input
               type="number"
               min="0"
@@ -368,7 +368,7 @@ export default function DexSwap() {
               value={amountOutMin}
               // onChange={(e) => setAmountOutMin(e.target.value)}
               disabled={isSwapping}
-              className="flex-grow bg-transparent text-gray-400 text-xl font-semibold outline-none"
+              className="w-full bg-transparent text-gray-400 text-xl font-semibold outline-none"
               readOnly
             />
             {/* <select
