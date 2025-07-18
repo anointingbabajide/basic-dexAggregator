@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+"use client";
 import { useWalletClient, useAccount } from "wagmi";
 import { getERC20Contract, getTokenFaucetContract } from "@/api/web3";
 import { useEffect, useState } from "react";
@@ -14,10 +14,7 @@ import { useEthersSigner } from "@/api/ethers";
 import { MaxUint256 } from "ethers";
 
 export default function DexSwapComponent() {
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
   const signer = useEthersSigner();
-
   const handleSwap = async (
     tokenIn: string,
     tokenOut: string,
@@ -36,14 +33,6 @@ export default function DexSwapComponent() {
         throw new Error("Failed to get quote");
       }
       const routerAddress = quote.routerAddress;
-      // console.log("Quote received:", quote);
-      // const estimatedAmount = quote.amountOut;
-      // console.log("Estimated amount out:", estimatedAmount.toString());
-
-      // const amountOutMin =
-      //   (estimatedAmount * BigInt(10000 - slippageTolerancePercent * 100)) /
-      //   BigInt(10000);
-
       if (tokenIn === WMON_ADDRESS && tokenOut === MON_ADDRESS) {
         const erc20contract = getERC20Contract(signer, tokenIn);
         const allowance = await erc20contract.approve(
@@ -53,11 +42,7 @@ export default function DexSwapComponent() {
         await allowance.wait();
       }
 
-      if (
-        tokenIn === WMON_ADDRESS ||
-        tokenIn === USDT_ADDRESS ||
-        tokenIn === USDC_ADDRESS
-      ) {
+      if (tokenIn != WMON_ADDRESS && tokenIn != MON_ADDRESS) {
         const erc20contract = getERC20Contract(signer, tokenIn);
         const allowance = await erc20contract.approve(
           dexAggregatorAddress,

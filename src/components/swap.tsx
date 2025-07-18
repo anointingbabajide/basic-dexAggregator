@@ -1,46 +1,20 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount } from "wagmi";
 import DexSwapComponent from "@/swap/dex";
 import { MON_ADDRESS, WMON_ADDRESS } from "@/constant/addresses";
 import { ethers } from "ethers";
 import { getTokenDecimals } from "@/utils/getTokenDecimals";
 import { getBestQuote } from "@/swap/quote";
-import { useWalletClient } from "wagmi";
-import { useEthersSigner } from "@/api/ethers";
-import { useActiveAccount, useActiveWalletChain } from "thirdweb/react";
-import { ethers6Adapter } from "thirdweb/adapters/ethers6";
-import { client } from "@/config/client";
+import { useEthersSigner, useWalletAddress } from "@/api/ethers";
 import ConnectWallet from "@/api/Connetwallet";
 import Image from "next/image";
-
-const TOKENS = [
-  {
-    symbol: "MON",
-    address: "0x0000000000000000000000000000000000000000",
-    image:
-      "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/I_t8rg_V_400x400.jpg/public",
-  }, // Native
-  {
-    symbol: "WMON",
-    address: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701",
-    image:
-      "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/I_t8rg_V_400x400.jpg/public",
-  },
-  {
-    symbol: "USDT",
-    address: "0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D",
-    image: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/images.png/public",
-  },
-  {
-    symbol: "USDC",
-    address: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea",
-    image: "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
-  },
-];
+import { TokenInfo } from "@/interface/tokenInfo";
+import { Dialog } from "radix-ui";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { TOKENS } from "@/tokenData/token";
 
 export default function DexSwap() {
+  const signer = useEthersSigner();
   const [tokenIn, setTokenIn] = useState(TOKENS[0].address);
   const [tokenOut, setTokenOut] = useState(TOKENS[3].address);
   const [amountIn, setAmountIn] = useState("");
@@ -50,20 +24,26 @@ export default function DexSwap() {
   const [message, setMessage] = useState<React.ReactNode>("");
   const [spillaagetolerancePercent, setSlippageTolerancePercent] =
     useState(0.5);
+  const selectedTokenIn = TOKENS.find((t) => t.address === tokenIn);
+  console.log("Selected Token In:", selectedTokenIn);
+  const selectedTokenOut = TOKENS.find((t) => t.address === tokenOut);
+  const [openTokenIn, setOpenTokenIn] = useState(false);
+  const [openTokenOut, setOpenTokenOut] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const { handleSwap } = DexSwapComponent();
-  const signer = useEthersSigner();
-  const activeAccount = useActiveAccount();
-  const activeChain = useActiveWalletChain();
+  const [filteredTokensIn, setFilteredTokensIn] = useState<TokenInfo[]>(TOKENS);
+  const [filteredTokensOut, setFilteredTokensOut] =
+    useState<TokenInfo[]>(TOKENS);
 
-  const address = activeAccount?.address;
+  const [tokenInfilter, settokenInFilter] = useState("");
+  const [tokenOutfilter, settokenOutFilter] = useState("");
+  const { handleSwap } = DexSwapComponent();
+  const address = useWalletAddress();
   const deadline = Math.floor(Date.now() / 1000) + deadlineMinutes * 60;
 
-  // console.log("Connected address:", address);
-  console.log("Signer:", signer);
   console.log("Amount Out Min:", amountOutMin);
   console.log("Token in:", tokenIn);
   console.log("Token Out:", tokenOut);
+  // console.log("filter:", filter);
 
   const swapTokens = () => {
     const temp = tokenIn;
@@ -76,22 +56,6 @@ export default function DexSwap() {
 
   useEffect(() => {
     async function getBestquote() {
-      if (!activeChain) {
-        console.error("Chain not connected");
-        return;
-      }
-
-      if (!activeAccount) {
-        console.error("Invalid account");
-        return;
-      }
-
-      const signer = ethers6Adapter.signer.toEthers({
-        client,
-        chain: activeChain,
-        account: activeAccount,
-      });
-
       if (!signer) {
         console.error("Signer not available");
         return;
@@ -116,9 +80,11 @@ export default function DexSwap() {
         }
         // Get decimals for input token
         const decimalsIn = getTokenDecimals(tokenIn);
+        console.log("Decimals In:", decimalsIn);
 
         // Convert user input decimal string to BigInt
         const amountInRaw = ethers.parseUnits(amountIn, decimalsIn);
+        console.log("Amount In Raw:", amountInRaw);
 
         // Call getBestQuote with raw BigInt amount
         const bestQuote = await getBestQuote(signer, amountInRaw, [
@@ -161,7 +127,7 @@ export default function DexSwap() {
     return () => clearTimeout(debounceTimeout);
 
     // Add all relevent dependencies
-  }, [signer, amountIn, tokenIn, tokenOut, spillaagetolerancePercent]);
+  }, [amountIn, tokenIn, tokenOut, spillaagetolerancePercent]);
 
   const handleSwapClick = async (
     tokenIn: string,
@@ -217,6 +183,43 @@ export default function DexSwap() {
     }
   };
 
+  useEffect(() => {
+    const inFilter = tokenInfilter?.trim().toLowerCase() || "";
+
+    if (!inFilter) {
+      setFilteredTokensIn(TOKENS);
+      return;
+    }
+
+    const filtered = TOKENS.filter(
+      (token) =>
+        token.name.toLowerCase().includes(inFilter) ||
+        token.symbol.toLowerCase().includes(inFilter) ||
+        token.address.toLowerCase().includes(inFilter)
+    );
+
+    setFilteredTokensIn(filtered);
+  }, [tokenInfilter]);
+
+  // Filter tokens for tokenOut input
+  useEffect(() => {
+    const outFilter = tokenOutfilter?.trim().toLowerCase() || "";
+
+    if (!outFilter) {
+      setFilteredTokensOut(TOKENS);
+      return;
+    }
+
+    const filtered = TOKENS.filter(
+      (token) =>
+        token.name.toLowerCase().includes(outFilter) ||
+        token.symbol.toLowerCase().includes(outFilter) ||
+        token.address.toLowerCase().includes(outFilter)
+    );
+
+    setFilteredTokensOut(filtered);
+  }, [tokenOutfilter]);
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col space-y-7 justify-center items-center px-4">
       <ConnectWallet />
@@ -229,7 +232,7 @@ export default function DexSwap() {
           <span className="block mb-2 font-semibold">From</span>
           <div className="flex items-center bg-gray-700 rounded-lg px-4 py-3">
             <input
-              type="number"
+              // type="number"
               min="0"
               step="any"
               placeholder="0.0"
@@ -238,46 +241,94 @@ export default function DexSwap() {
               disabled={isSwapping}
               className="flex-grow bg-transparent text-gray-100 text-xl font-semibold outline-none"
             />
-            {/* <select
-              className="ml-4 bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
-              value={tokenIn}
-              onChange={(e) => setTokenIn(e.target.value)}
-              disabled={isSwapping}
-            >
-              {TOKENS.map(({ symbol, address }) => (
-                <option key={address} value={address}>
-                  {symbol}
-                </option>
-              ))}
-            </select> */}
 
             <div className="flex items-center space-x-2">
-              {/* Show image matching current selected tokenOut */}
-              <Image
-                src={
-                  TOKENS.find((t) => t.address === tokenIn)?.image ??
-                  "/default-token.png"
-                }
-                alt={
-                  TOKENS.find((t) => t.address === tokenIn)?.symbol ?? "token"
-                }
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
+              <Dialog.Root open={openTokenIn} onOpenChange={setOpenTokenIn}>
+                <Dialog.Trigger asChild>
+                  <div className="flex items-center space-x-2">
+                    <Image
+                      src={selectedTokenIn?.image ?? "/default-token?.png"}
+                      alt={selectedTokenIn?.symbol ?? "token"}
+                      width={24}
+                      height={24}
+                      className="rounded-full"
+                    />
 
-              <select
-                className="bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
-                value={tokenIn}
-                onChange={(e) => setTokenIn(e.target.value)}
-                disabled={isSwapping}
-              >
-                {TOKENS.map(({ symbol, address }) => (
-                  <option key={address} value={address}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
+                    {selectedTokenIn?.symbol}
+                  </div>
+                </Dialog.Trigger>
+
+                <Dialog.Portal>
+                  <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn" />
+                  <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-gray-900 border border-gray-800 text-white shadow-2xl p-6 focus:outline-none animate-zoomIn">
+                    <Dialog.Title className="text-2xl font-bold mb-1">
+                      Select Token
+                    </Dialog.Title>
+                    <Dialog.Description className="mb-4 text-sm text-gray-400">
+                      Search for a token to swap, or enter the token address.
+                    </Dialog.Description>
+                    <input
+                      value={tokenInfilter}
+                      // onChange={(e) => onFilterChange(e.target.value)}
+                      onChange={(e) => settokenInFilter(e.target.value)}
+                      placeholder="Search by name, symbol or address"
+                      className="w-full mb-4 rounded-lg border-none bg-gray-800 py-2 px-3 text-base text-white focus:ring-2 focus:ring-blue-500 transition"
+                      autoFocus
+                    />
+                    <div className="max-h-72 overflow-y-auto flex flex-col space-y-6 pr-1">
+                      {filteredTokensIn.map((token) => (
+                        <div
+                          key={token?.address}
+                          onClick={() => {
+                            setTokenIn(token?.address);
+                            setOpenTokenIn(false);
+                          }}
+                          className="flex items-center gap-4 bg-gray-800 rounded-lg p-3 border border-gray-700 hover:border-blue-600 hover:shadow-md transition cursor-pointer"
+                        >
+                          <Image
+                            src={token?.image}
+                            alt={token?.name}
+                            width={36}
+                            height={36}
+                            className="rounded-full border border-gray-600"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h2 className="font-semibold text-lg truncate">
+                                {token?.symbol}
+                              </h2>
+                              <span className="text-xs text-gray-400 truncate">
+                                {token?.name}
+                              </span>
+                            </div>
+                            <p className="text-xs text-blue-300 truncate">
+                              {token?.address === MON_ADDRESS
+                                ? "native"
+                                : token?.address}
+                            </p>
+                          </div>
+                          {/* <span className="ml-2 text-xs font-mono text-gray-400">
+                            0
+                          </span> */}
+                        </div>
+                      ))}
+                      {filteredTokensIn.length === 0 && (
+                        <div className="text-center text-gray-500 py-8">
+                          No tokens found.
+                        </div>
+                      )}
+                    </div>
+                    <Dialog.Close asChild>
+                      <button
+                        className="absolute right-2.5 top-2.5 inline-flex size-[25px] appearance-none items-center justify-center rounded-full text-violet11 bg-gray3 hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7 focus:outline-none"
+                        aria-label="Close"
+                      >
+                        <Cross2Icon />
+                      </button>
+                    </Dialog.Close>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
             </div>
           </div>
         </label>
@@ -315,7 +366,7 @@ export default function DexSwap() {
               step="any"
               placeholder="0.0"
               value={amountOutMin}
-              onChange={(e) => setAmountOutMin(e.target.value)}
+              // onChange={(e) => setAmountOutMin(e.target.value)}
               disabled={isSwapping}
               className="flex-grow bg-transparent text-gray-400 text-xl font-semibold outline-none"
               readOnly
@@ -334,32 +385,91 @@ export default function DexSwap() {
             </select> */}
 
             <div className="flex items-center space-x-2">
-              {/* Show image matching current selected tokenOut */}
-              <Image
-                src={
-                  TOKENS.find((t) => t.address === tokenOut)?.image ??
-                  "/default-token.png"
-                }
-                alt={
-                  TOKENS.find((t) => t.address === tokenOut)?.symbol ?? "token"
-                }
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
+              <Dialog.Root open={openTokenOut} onOpenChange={setOpenTokenOut}>
+                <Dialog.Trigger asChild>
+                  <div className="flex items-center space-x-2">
+                    <Image
+                      src={selectedTokenOut?.image ?? "/default-token?.png"}
+                      alt={selectedTokenOut?.symbol ?? "token"}
+                      width={24}
+                      height={24}
+                      className="rounded-full"
+                    />
 
-              <select
-                className="bg-gray-800 text-gray-300 rounded-lg px-3 py-1 text-lg cursor-pointer"
-                value={tokenOut}
-                onChange={(e) => setTokenOut(e.target.value)}
-                disabled={isSwapping}
-              >
-                {TOKENS.map(({ symbol, address }) => (
-                  <option key={address} value={address}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
+                    {selectedTokenOut?.symbol}
+                  </div>
+                </Dialog.Trigger>
+
+                <Dialog.Portal>
+                  <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn" />
+                  <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-gray-900 border border-gray-800 text-white shadow-2xl p-6 focus:outline-none animate-zoomIn">
+                    <Dialog.Title className="text-2xl font-bold mb-1">
+                      Select Token
+                    </Dialog.Title>
+                    <Dialog.Description className="mb-4 text-sm text-gray-400">
+                      Search for a token to swap, or enter the token address.
+                    </Dialog.Description>
+                    <input
+                      value={tokenOutfilter}
+                      onChange={(e) => settokenOutFilter(e.target.value)}
+                      placeholder="Search by name, symbol or address"
+                      className="w-full mb-4 rounded-lg border-none bg-gray-800 py-2 px-3 text-base text-white focus:ring-2 focus:ring-blue-500 transition"
+                      autoFocus
+                    />
+                    <div className="max-h-72 overflow-y-auto flex flex-col space-y-6 pr-1">
+                      {filteredTokensOut.map((token) => (
+                        <div
+                          key={token?.address}
+                          onClick={() => {
+                            setTokenOut(token?.address);
+                            setOpenTokenOut(false);
+                          }}
+                          className="flex items-center gap-4 bg-gray-800 rounded-lg p-3 border border-gray-700 hover:border-blue-600 hover:shadow-md transition cursor-pointer"
+                        >
+                          <Image
+                            src={token?.image}
+                            alt={token?.name}
+                            width={36}
+                            height={36}
+                            className="rounded-full border border-gray-600"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h2 className="font-semibold text-lg truncate">
+                                {token?.symbol}
+                              </h2>
+                              <span className="text-xs text-gray-400 truncate">
+                                {token?.name}
+                              </span>
+                            </div>
+                            <p className="text-xs text-blue-300 truncate">
+                              {token?.address === MON_ADDRESS
+                                ? "native"
+                                : token?.address}
+                            </p>
+                          </div>
+                          <span className="ml-2 text-xs font-mono text-gray-400">
+                            0
+                          </span>
+                        </div>
+                      ))}
+                      {filteredTokensOut.length === 0 && (
+                        <div className="text-center text-gray-500 py-8">
+                          No tokens found.
+                        </div>
+                      )}
+                    </div>
+                    <Dialog.Close asChild>
+                      <button
+                        className="absolute right-2.5 top-2.5 inline-flex size-[25px] appearance-none items-center justify-center rounded-full text-violet11 bg-gray3 hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7 focus:outline-none"
+                        aria-label="Close"
+                      >
+                        <Cross2Icon />
+                      </button>
+                    </Dialog.Close>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
             </div>
           </div>
         </label>
